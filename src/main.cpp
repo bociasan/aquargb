@@ -8,7 +8,7 @@
 
 
 #define LED_PIN     D5
-#define NUM_LEDS    70
+#define NUM_LEDS    20
 #define BRIGHTNESS  70
 #define SATURATION  255
 #define LED_TYPE    WS2812B
@@ -18,6 +18,7 @@ int fade_iterator = 0;
 int min_value = 2000;
 int max_value = 0;
 int medium_value = 850;
+int hysteresis = 30;
 bool rising_flag = false;
 
 #define DHTPIN D1     // Digital pin connected to the DHT sensor
@@ -36,7 +37,7 @@ unsigned long last_pulse_time = 0;
 unsigned long finish_threshold = 400;
 bool needToNotify = true;
 
-#define transition_time 3000
+#define transition_time 10000
 
 #define users_count 3
 struct User {
@@ -45,7 +46,7 @@ struct User {
   String name = "";
 } users[users_count];
 const String user_names[] = {"Dan", "Marin", "Laura"};
-const int last_three_day_consumption[] = {90, 85, 93};
+const int last_three_day_consumption[] = {90, 85, 2987};
 struct Result {
   float volume = 0;
   unsigned long duration = 0;
@@ -55,8 +56,8 @@ struct Result {
 struct Data {
   float temperature = 0;
   float humidity = 0;
-  float total_volume = 0;
-  unsigned long total_duration = 0;
+  float total_volume = 10;
+  unsigned long total_duration = 200;
 } data;
 
 void enableDevice(){
@@ -267,8 +268,16 @@ void calcFlowRate(){
   currentTime = millis();
   if(currentTime >= (cloopTime + 250))
   {
-    data.temperature = dht.readTemperature();
-    data.humidity = dht.readHumidity();
+    
+    float temporary_temp = dht.readTemperature();
+    float temporary_humidity = dht.readHumidity();
+
+    if (temporary_temp != data.temperature && data.humidity!= temporary_humidity) {
+      needToNotify = true;
+    }
+
+    data.temperature = temporary_temp;
+    data.humidity = temporary_humidity;
 
     cloopTime = currentTime; 
     if(flow_frequency != 0){
@@ -342,15 +351,19 @@ void loop ()
   }
   int value = analogRead(A0);
 
-  if (value > medium_value) {
+  if (value >= medium_value + hysteresis ) {
     if (!rising_flag) {
       rising_flag = true;
       flow_frequency++;
       enableDevice();
     }
   } else{
-    rising_flag = false;
+    if (value <= medium_value - hysteresis) {
+      rising_flag = false;
+    }
   }
+
+
 
   // if (value > max_value) max_value = value;
   // if (value < min_value) min_value = value;

@@ -11,3 +11,9 @@
   bool flags = millis() - tmrs >= (x);\
   if (flags) tmrs = millis();\
   if (flags)
+
+  //   #define EVERY_MSSS(x) \
+  // static uint32_t tmrss;\
+  // bool flagss = millis() - tmrss >= (x);\
+  // if (flagss) tmrss = millis();\
+  // if (flagss)
